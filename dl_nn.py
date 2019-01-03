@@ -23,21 +23,24 @@ def nn(target, predictors, classes, hidden_layer_nodes, hidden_layers, predictor
         # Forward Step
         for k in range(1, len(layer_dat)):
             layer_dat[k][2] = np.matmul(layer_dat[k - 1][3], layer_dat[k][1]) + layer_dat[k][0]
-            layer_dat[k][3] = hf.softmax(layer_dat[k][2])
+            if k < len(layer_dat):
+                layer_dat[k][3] = hf.sigmoid(layer_dat[k][2])
+            else:
+                layer_dat[k][3] = hf.softmax(layer_dat[k][2])
 
         cost = np.mean((target - layer_dat[-1][3]) ** 2)
 
         # Back Step
-        del_l = -2 * (target - layer_dat[-1][3]) * hf.softmax_del(layer_dat[-1][2], target)
+        del_l = -(target - layer_dat[-1][3]) * hf.softmax_del(layer_dat[-1][2], target)
         del_l_b = np.sum(del_l, keepdims=True, axis=0) / num_obs
-        del_l_w = np.sum(np.matmul(np.transpose(layer_dat[-2][3]), del_l), keepdims=True, axis=0) / num_obs
+        del_l_w = np.matmul(np.transpose(layer_dat[-2][3]), del_l) / num_obs
         layer_dat[-1][0] = layer_dat[-1][0] - eps * del_l_b
         layer_dat[-1][1] = layer_dat[-1][1] - eps * del_l_w
 
         for j in range(2, len(layer_dat)):
-            del_lh = np.matmul(del_l, layer_dat[-j + 1][1]) * hf.sigmoid_del(layer_dat[-j][2])
-            del_l_b = np.sum(del_lh, keepdims=True, axis=0) / num_obs
-            del_l_w = np.sum(np.matmul(np.transpose(layer_dat[-j - 1][3]), del_lh), keepdims=True, axis=0) / num_obs
+            del_l = np.matmul(del_l, np.transpose(layer_dat[-j + 1][1])) * hf.sigmoid_del(layer_dat[-j][2])
+            del_l_b = np.sum(del_l, keepdims=True, axis=0) / num_obs
+            del_l_w = np.matmul(np.transpose(layer_dat[-j - 1][3]), del_l) / num_obs
             layer_dat[-j][0] = layer_dat[-j][0] - eps * del_l_b
             layer_dat[-j][1] = layer_dat[-j][1] - eps * del_l_w
 
