@@ -9,7 +9,7 @@ def sigmoid(x):
     return (1 + np.exp(-x)) ** -1
 
 
-def sigmoid_delta(x):
+def sigmoid_del(x):
     return sigmoid(x) * (1 - sigmoid(x))
 
 
@@ -18,5 +18,10 @@ def softmax(x):
     return np.exp(x) / tot
 
 
-def softmax_delta(x):
-    return softmax(x) * (1 - softmax(x))
+def softmax_del(x, t):
+    x = softmax(x)
+    t_z = x
+    t_z[t == 1] = 1 - t_z[t == 1]
+    t_z[t == 0] = -t_z[t == 0]
+
+    return x * t_z
