@@ -5,6 +5,17 @@ def cost_function_quadratic(y, pred):
     return np.mean((y - pred) ** 2, axis=0)
 
 
+def relu(x):
+    x[x < 0] = 0
+    return x
+
+
+def relu_del(x):
+    x[x < 0] = 0
+    x[x > 0] = 1
+    return x
+
+
 def sigmoid(x):
     return (1 + np.exp(-x)) ** -1
 

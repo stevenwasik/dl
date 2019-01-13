@@ -3,11 +3,13 @@ import random
 import dl_helper_functions as hf
 
 
-def nn_mini(target, predictors, classes, hidden_layer_nodes, hidden_layers, predictor_count, eps=0.001, epochs=100,
-            minibatch_size=50):
+def nn_mini_mo(target, predictors, classes, hidden_layer_nodes, hidden_layers, predictor_count, eps=0.001, epochs=100,
+               minibatch_size=50, momentum=.9):
     network_struc = [predictor_count] + [hidden_layer_nodes] * hidden_layers + [classes]
     num_obs = len(target)
     cost = 0
+
+    # predictors = random.shuffle(predictors)
 
     # Initialize
     layer_dat = [[0, 0, 0, predictors]]
@@ -15,11 +17,14 @@ def nn_mini(target, predictors, classes, hidden_layer_nodes, hidden_layers, pred
         node_count_prior_layer = network_struc[i - 1]
         node_count_current_layer = network_struc[i]
         b = np.reshape(np.random.randn(node_count_current_layer), (1, node_count_current_layer))
+        b_mo = np.reshape(np.zeros(node_count_current_layer), (1, node_count_current_layer))
         w = np.reshape(np.random.randn(node_count_prior_layer * node_count_current_layer),
                        (node_count_prior_layer, node_count_current_layer))
+        w_mo = np.reshape(np.zeros(node_count_prior_layer * node_count_current_layer),
+                          (node_count_prior_layer, node_count_current_layer))
         z = np.zeros((num_obs, node_count_current_layer))
         a = np.zeros((num_obs, node_count_current_layer))
-        layer_dat.append([b, w, z, a])
+        layer_dat.append([b, w, z, a, b_mo, w_mo])
 
     for i in range(epochs):
         # Forward Step
@@ -46,8 +51,12 @@ def nn_mini(target, predictors, classes, hidden_layer_nodes, hidden_layers, pred
             del_l = -(mini_target - mini_layer[3]) * hf.softmax_del(mini_layer[2], mini_target)
             del_l_b = np.sum(del_l, keepdims=True, axis=0) / minibatch_size
             del_l_w = np.matmul(np.transpose(mini_layer_p_a), del_l) / minibatch_size
-            layer_dat[-1][0] = mini_layer[0] - eps * del_l_b
-            layer_dat[-1][1] = mini_layer[1] - eps * del_l_w
+
+            layer_dat[-1][4] = - eps * del_l_b + momentum * layer_dat[-1][4]
+            layer_dat[-1][5] = - eps * del_l_w + momentum * layer_dat[-1][5]
+
+            layer_dat[-1][0] = mini_layer[0] + layer_dat[-1][4]
+            layer_dat[-1][1] = mini_layer[1] + layer_dat[-1][5]
 
             for j in range(2, len(layer_dat)):
                 mini_layer = [layer_dat[-j][0], layer_dat[-j][1],
@@ -58,8 +67,12 @@ def nn_mini(target, predictors, classes, hidden_layer_nodes, hidden_layers, pred
                 del_l = np.matmul(del_l, np.transpose(mini_layer_n_w)) * hf.relu_del(mini_layer[2])
                 del_l_b = np.sum(del_l, keepdims=True, axis=0) / minibatch_size
                 del_l_w = np.matmul(np.transpose(mini_layer_p_a), del_l) / minibatch_size
-                layer_dat[-j][0] = mini_layer[0] - eps * del_l_b
-                layer_dat[-j][1] = mini_layer[1] - eps * del_l_w
+
+                layer_dat[-j][4] = - eps * del_l_b + momentum * layer_dat[-j][4]
+                layer_dat[-j][5] = - eps * del_l_w + momentum * layer_dat[-j][5]
+
+                layer_dat[-j][0] = mini_layer[0] + layer_dat[-j][4]
+                layer_dat[-j][1] = mini_layer[1] + layer_dat[-j][5]
 
         if i % int(epochs / 10) == 0:
             print('iteration ', i, ' cost: ', cost)
